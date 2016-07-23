@@ -1,3 +1,5 @@
 bower_components/
 output/
 dist/
+npm-debug.log
+.pulp-cache

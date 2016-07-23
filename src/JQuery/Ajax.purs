@@ -1,50 +1,42 @@
 module JQuery.Ajax
   ( Ajax()
   , C()
-  , ErrCont(..)
-  , Header(..)
-  , DataType(..)
-  , Method(..)
-  , URL()
+  , ErrCont
   , Response(..)
   , JQueryAjaxOptions()
-  , getWith
-  , get
-  , getJSON
-  , postWith
-  , putWith
-  , delete
-  , url
-  , method
-  , dataType
-  , body
-  , contentType
   ) where
 
-import Control.Monad.Eff
-import Data.Either
-import Control.Monad.Error
-import Control.Monad.Cont.Trans
-import Control.Monad.Error.Trans
-import Data.Foreign.Class
-import Data.Foreign
-import Data.Function
-import Data.Options (Options(), Option(), IsOption, optionFn, options, (:=))
-
+--   ( Ajax(), C(), ErrCont(..), Response(..), Header(..), DataType(..)
+--   , Method(..), URL(), JQueryAjaxOptions()
+--   , getWith, get, getJSON, postWith, putWith, delete
+--   , url, method, dataType, body, contentType
+--   ) where
+--
+import Prelude
+import Control.Monad.Cont.Trans (ContT(..))
+import Control.Monad.Eff (Eff)
+import Control.Monad.Except.Trans (ExceptT(..))
+import Data.Either (Either(..))
+import Data.Foreign (Foreign(), F())
+import Data.Foreign.Class (class IsForeign, read)
+import Data.Function.Uncurried (Fn3, runFn3)
+import Data.Options (Options(), Option(), options, (:=))
+--
 foreign import data Ajax :: !
 
 type C eff = ContT Unit (Eff (ajax :: Ajax | eff))
 
-type ErrCont eff = ErrorT Response (C eff)
+type ErrCont eff = ExceptT Response (C eff)
 
 newtype Response = Response {status :: Number, responseText :: String}
 
-instance errorResponse :: Error Response where
-  noMsg = makeResponse 0 ""
-  strMsg = makeResponse 0
-
+-- Todo: Error is not a type class!!
+-- instance errorResponse :: Error Response where
+--   noMsg = makeResponse 0 ""
+--   strMsg = makeResponse 0
+--
 instance showResponse :: Show Response where
-  show (Response err) = (show $ err.status) ++ " " ++ err.responseText
+  show (Response err) = (show $ err.status) <> " " <> err.responseText
 
 makeResponse :: Number -> String -> Response
 makeResponse status text = Response {status: status, responseText: text}
@@ -55,24 +47,12 @@ data Header = Header String String
 
 type AjaxResponse = {status :: Number, responseText :: String}
 
-foreign import jqueryAjaxImpl
-  """
-  function jqueryAjaxImpl(settings, onError, onSuccess) {
-    return function() {
-      return jQuery.ajax(jQuery.extend({}, settings, {
-        success: function(data) {
-          onSuccess(data)();
-        },
-        error: function(error) {
-          onError(error)();
-        }
-      }));
-    }
-  }
-  """ :: forall eff. Fn3 Foreign
-                         (AjaxResponse -> Eff (ajax :: Ajax | eff) Unit)
-                         (Foreign -> Eff (ajax :: Ajax | eff) Unit)
-                         (Eff (ajax :: Ajax | eff) Unit)
+foreign import data JQueryAjaxOptions :: *
+
+foreign import jqueryAjaxImpl :: forall eff. Fn3 Foreign
+                                    (AjaxResponse -> Eff (ajax :: Ajax | eff) Unit)
+                                    (Foreign -> Eff (ajax :: Ajax | eff) Unit)
+                                    (Eff (ajax :: Ajax | eff) Unit)
 
 jqueryAjax :: forall eff. Options JQueryAjaxOptions
                        -> (Either Response Foreign -> Eff (ajax :: Ajax | eff) Unit)
@@ -80,7 +60,7 @@ jqueryAjax :: forall eff. Options JQueryAjaxOptions
 jqueryAjax s cb = runFn3 jqueryAjaxImpl (options s) (cb <<< Left <<< Response) (cb <<< Right)
 
 jqueryAjaxCont :: forall eff. Options JQueryAjaxOptions -> ErrCont eff Foreign
-jqueryAjaxCont s = ErrorT $ ContT $ jqueryAjax s
+jqueryAjaxCont s = ExceptT $ ContT $ jqueryAjax s
 
 getWith :: forall eff. Options JQueryAjaxOptions -> URL -> ErrCont eff Foreign
 getWith opts url' = jqueryAjaxCont $ url := url' <> opts
@@ -100,14 +80,8 @@ putWith url' opts = jqueryAjaxCont $ method := PUT <> url := url' <> opts
 delete :: forall eff. URL -> ErrCont eff Foreign
 delete url' = jqueryAjaxCont $ method := DELETE <> url := url'
 
-foreign import data JQueryAjaxOptions :: *
 
-foreign import unsafeToOption
-  """
-  function unsafeToOption(s) {
-    return s;
-  }
-  """ :: forall a. String -> Option JQueryAjaxOptions a
+foreign import unsafeToOption :: forall a. String -> Option JQueryAjaxOptions a
 
 url :: Option JQueryAjaxOptions String
 url = unsafeToOption "url"
@@ -120,8 +94,9 @@ instance showMethod :: Show Method where
   show PUT = "PUT"
   show DELETE = "DELETE"
 
-instance methodIsOption :: IsOption Method where
-  (:=) k m = (optionFn k) := show m
+-- Todo: Understand what this method does
+-- instance methodIsOption :: Option Method where
+--  options k m = (assoc k) := show m
 
 method :: Option JQueryAjaxOptions Method
 method = unsafeToOption "method"
@@ -133,13 +108,14 @@ instance showDataType :: Show DataType where
   show JSON = "json"
   show HTML = "html"
 
-instance dataTypeIsOption :: IsOption DataType where
-  (:=) k a = (optionFn k) := show a
+-- Todo: Solve Option DataType issue where Option is not a dataType
+-- instance dataTypeIsOption :: Option DataType where
+--   assoc k a = ((:=) k) := show a
 
 dataType :: Option JQueryAjaxOptions DataType
 dataType = unsafeToOption "dataType"
 
-body :: forall attrs. Option JQueryAjaxOptions String
+body :: Option JQueryAjaxOptions String
 body = unsafeToOption "data"
 
 contentType :: Option JQueryAjaxOptions String

@@ -1,0 +1,11 @@
+{
+  "name": "purescript-jquery-ajax",
+  "files": [],
+  "scripts": {
+    "build": "pulp --before clear build",
+    "watch": "pulp --watch --before clear build"
+  },
+  "dependencies": {
+    "jquery": "^3.1.0"
+  }
+}

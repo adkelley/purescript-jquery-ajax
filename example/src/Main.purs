@@ -20,18 +20,13 @@ newtype Person = Person
   , age :: Number
   }
 
-foreign import showPersonImpl
-  """
-  function showPersonImpl(p) {
-    return JSON.stringify(p);
-  }
-  """ :: forall a. a -> String
+foreign import showPersonImpl :: forall a. a -> String
 
 instance showPerson :: Show Person where
   show (Person p) = showPersonImpl p
 
 instance toJsonPerson :: ToJSON Person where
-  toJSON (Person {firstName = first, lastName = last, age = age}) = 
+  toJSON (Person {firstName = first, lastName = last, age = age}) =
     object ["firstName" .= first, "lastName" .= last, "age" .= age]
 
 contentTypeJson :: Options JQueryAjaxOptions

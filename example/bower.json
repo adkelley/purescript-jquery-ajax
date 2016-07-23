@@ -3,11 +3,10 @@
   "description": "Example project for purescript-jquery-ajax",
   "dependencies": {
         "purescript-jquery-ajax": "*",
-        "purescript-foreign": "*",
-        "purescript-transformers": "*",
-        "purescript-either": "*",
-        "purescript-json": "*",
+        "purescript-foreign": "^1.0.0",
+        "purescript-transformers": "^1.0.0",
+        "purescript-either": "^1.0.0",
+        "purescript-json": "^1.0.0",
         "jquery": "*"
   }
 }
-
